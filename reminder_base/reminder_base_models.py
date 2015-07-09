@@ -32,17 +32,6 @@ class reminder(models.AbstractModel):
         event = self.env['calendar.event'].with_context({}).create(vals)
         return event
 
-    @api.one
-    def _check_update_reminder(self, vals):
-        if not vals:
-            return False
-        fields = ['reminder_alarm_ids',
-                  self._reminder_date_field,
-                  self._reminder_description_field]
-        if not any([k in vals for k in fields if k]):
-            return False
-        return True
-
     @api.model
     def _init_reminder(self):
         domain = [(self._reminder_date_field, '!=', False)]
@@ -53,12 +42,20 @@ class reminder(models.AbstractModel):
         if self._context.get('do_not_update_reminder'):
             # ignore own calling of write function
             return
-        if not self._check_update_reminder(vals):
+        if not vals:
             return
-        self._do_update_reminder()
+        if not self.reminder_event_id and self._reminder_date_field not in vals:
+            # don't allow to create reminder if date is not set
+            return
+        fields = ['reminder_alarm_ids',
+                  self._reminder_date_field,
+                  self._reminder_description_field]
+        if not any([k in vals for k in fields if k]):
+            return
+        self._do_update_reminder(update_date=self._reminder_date_field in vals)
 
     @api.one
-    def _do_update_reminder(self):
+    def _do_update_reminder(self, update_date=True):
         vals = {'name': self._get_reminder_event_name()[0]}
 
         event = self.reminder_event_id
@@ -69,23 +66,24 @@ class reminder(models.AbstractModel):
         if not event.reminder_res_id:
             vals['reminder_res_id'] = self.id
 
-        fdate = self._fields[self._reminder_date_field]
-        fdate_value = getattr(self, self._reminder_date_field)
-        if not fdate_value:
-            event.unlink()
-            return
-        if fdate.type == 'date':
-            vals.update({
-                'allday': True,
-                'start_date': fdate_value,
-                'stop_date': fdate_value,
-            })
-        elif fdate.type == 'datetime':
-            vals.update({
-                'allday': False,
-                'start_datetime': fdate_value,
-                'stop_datetime': fdate_value,
-            })
+        if update_date:
+            fdate = self._fields[self._reminder_date_field]
+            fdate_value = getattr(self, self._reminder_date_field)
+            if not fdate_value:
+                event.unlink()
+                return
+            if fdate.type == 'date':
+                vals.update({
+                    'allday': True,
+                    'start_date': fdate_value,
+                    'stop_date': fdate_value,
+                })
+            elif fdate.type == 'datetime':
+                vals.update({
+                    'allday': False,
+                    'start_datetime': fdate_value,
+                    'stop_datetime': fdate_value,
+                })
         if self._reminder_description_field:
             vals['description'] = getattr(self, self._reminder_description_field)
 
@@ -94,7 +92,6 @@ class reminder(models.AbstractModel):
             for field_name in self._reminder_attendees_fields:
                 field = self._columns[field_name]
                 partner = getattr(self, field_name)
-                print 'field', field
                 model = None
                 try:
                     model = field.comodel_name
@@ -103,15 +100,15 @@ class reminder(models.AbstractModel):
 
                 if model == 'res.users':
                     partner = partner.partner_id
-                partner_ids.append(partner.id)
+                if partner.id not in partner_ids:
+                    partner_ids.append(partner.id)
             vals['partner_ids'] = [(6, 0, partner_ids)]
 
         event.write(vals)
 
     @api.model
-    def _check_reminder_event(self, vals):
-        fields = ['reminder_alarm_ids',
-                  self._reminder_date_field]
+    def _check_and_create_reminder_event(self, vals):
+        fields = [self._reminder_date_field]
 
         if any([k in vals for k in fields]):
             event = self._create_reminder_event()
@@ -120,7 +117,7 @@ class reminder(models.AbstractModel):
 
     @api.model
     def create(self, vals):
-        vals = self._check_reminder_event(vals)
+        vals = self._check_and_create_reminder_event(vals)
         res = super(reminder, self).create(vals)
         res._update_reminder(vals)
         return res
@@ -128,7 +125,7 @@ class reminder(models.AbstractModel):
     @api.one
     def write(self, vals):
         if not self.reminder_event_id:
-            vals = self._check_reminder_event(vals)
+            vals = self._check_and_create_reminder_event(vals)
         res = super(reminder, self).write(vals)
         self._update_reminder(vals)
         return res
