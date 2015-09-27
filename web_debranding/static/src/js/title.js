@@ -1,8 +1,6 @@
-openerp.web_debranding = function(instance) {
-
+openerp.web_debranding.load_title = function(instance) {
  var QWeb = instance.web.qweb;
  var _t = instance.web._t;
-
  instance.web.WebClient.include({
     init: function(parent, client_options) {
         this._super(parent, client_options);
@@ -10,6 +8,8 @@ openerp.web_debranding = function(instance) {
         this.get_title_part();
     },
     get_title_part: function(){
+        if (!openerp.session.db)
+            return;
         var self = this;
         var model = new openerp.Model("ir.config_parameter");
 
@@ -25,5 +25,4 @@ openerp.web_debranding = function(instance) {
                  });
     },
  }); 
-
 };
