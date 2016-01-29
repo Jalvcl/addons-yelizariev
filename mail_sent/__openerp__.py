@@ -1,9 +1,10 @@
 {
     'name' : 'Sentbox',
-    'version' : '1.0.0',
+    'version' : '1.0.1',
     'author' : 'IT-Projects LLC, Ivan Yelizariev',
+    'license': 'GPL-3',
     'category' : 'Social Network',
-    'website' : 'https://yelizariev.github.io',
+    'website' : 'https://twitter.com/yelizariev',
     'price': 9.00,
     'currency': 'EUR',
     'depends' : ['mail'],

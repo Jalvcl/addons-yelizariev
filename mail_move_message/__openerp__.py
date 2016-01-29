@@ -1,9 +1,10 @@
 {
     'name' : 'Mail relocation',
-    'version' : '1.0.2',
+    'version' : '1.0.3',
     'author' : 'IT-Projects LLC, Ivan Yelizariev',
+    'license': 'GPL-3',
     'category' : 'Social Network',
-    'website' : 'https://yelizariev.github.io',
+    'website' : 'https://twitter.com/yelizariev',
     'price': 9.00,
     'currency': 'EUR',
     'depends' : ['mail', 'web_polymorphic_field'],
